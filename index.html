@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analizador Rápido - Pocket Option</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      margin: 0; padding: 16px; background: var(--bg); color: var(--text);
+      display: flex; justify-content: center;
+    }
+    .app { width: 100%; max-width: 520px; }
+    h1 { font-size: 1.25rem; margin: 0 0 4px; }
+    p.sub { color: var(--muted); font-size: 0.88rem; margin: 0 0 16px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px; margin-bottom: 12px;
+    }
+    label.block { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+    select, input {
+      width: 100%; padding: 10px; border-radius: 10px;
+      border: 1px solid var(--border); background: #0f172a; color: var(--text);
+      font-size: 0.95rem;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .checks { display: grid; gap: 8px; margin-top: 8px; }
+    .check-item {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #0f172a; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid var(--border); font-size: 0.9rem;
+    }
+    button {
+      width: 100%; padding: 13px; border: none; border-radius: 12px;
+      background: #2563eb; color: white; font-weight: 700; font-size: 1rem;
+      cursor: pointer; margin-top: 4px;
+    }
+    button:active { transform: scale(0.99); }
+    .verdict {
+      text-align: center; padding: 16px; border-radius: 14px;
+      border: 1px solid var(--border); background: #0f172a;
+    }
+    .signal { font-size: 1.5rem; font-weight: 800; margin: 4px 0; }
+    .call { color: var(--green); }
+    .put { color: var(--red); }
+    .wait { color: var(--amber); }
+    .reasons { text-align: left; font-size: 0.88rem; color: var(--muted); margin-top: 10px; padding-left: 18px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Analizador Rápido Pocket Option</h1>
+    <p class="sub">Evalúa confluencias técnicas en segundos antes de entrar.</p>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label class="block">Mercado / Temporalidad</label>
+          <select id="timeframe">
+            <option value="1m">1 Minuto (1m)</option>
+            <option value="5m">5 Minutos (5m)</option>
+            <option value="otc">OTC / Alta volatilidad</option>
+          </select>
+        </div>
+        <div>
+          <label class="block">Riesgo por operación (%)</label>
+          <input type="number" id="risk" value="2" min="0.5" max="10" step="0.5" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <label class="block">Lectura técnica actual</label>
+      <div class="checks">
+        <div class="check-item">
+          <span>Tendencia (EMA rápida vs lenta)</span>
+          <select id="trend" style="width: 165px; padding: 6px;">
+            <option value="up">Alcista clara</option>
+            <option value="down">Bajista clara</option>
+            <option value="flat">Lateral / Rango</option>
+          </select>
+        </div>
+
+        <div class="check-item">
+          <span>RSI (14)</span>
+          <select id="rsi" style="width: 165px; padding: 6px;">
+            <option value="oversold">Sobreventa (&lt; 30 / rebote)</option>
+            <option value="overbought">Sobrecompra (&gt; 70 / rechazo)</option>
+            <option value="mid">Zona media (30 - 70)</option>
+          </select>
+        </div>
+
+        <div class="check-item">
+          <span>Vela / Estructura en zona</span>
+          <select id="candle" style="width: 165px; padding: 6px;">
+            <option value="bull_rej">Rechazo / Envolvente alcista</option>
+            <option value="bear_rej">Rechazo / Envolvente bajista</option>
+            <option value="doji">Mecha larga / Indecisión</option>
+          </select>
+        </div>
+
+        <div class="check-item">
+          <span>Nivel clave cercano</span>
+          <select id="level" style="width: 165px; padding: 6px;">
+            <option value="support">En Soporte</option>
+            <option value="resistance">En Resistencia</option>
+            <option value="none">En medio de la nada</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="analyze()">Evaluar Entrada</button>
+    </div>
+
+    <div class="card verdict" id="result">
+      <div style="color: var(--muted); font-size: 0.85rem;">RESULTADO</div>
+      <div class="signal wait">LISTO PARA ANALIZAR</div>
+      <div style="color: var(--muted); font-size: 0.88rem;">Selecciona los datos de tu gráfico y pulsa Evaluar Entrada.</div>
+    </div>
+  </div>
+
+  <script>
+    function analyze() {
+      const tf = document.getElementById('timeframe').value;
+      const risk = parseFloat(document.getElementById('risk').value) || 1;
+      const trend = document.getElementById('trend').value;
+      const rsi = document.getElementById('rsi').value;
+      const candle = document.getElementById('candle').value;
+      const level = document.getElementById('level').value;
+
+      let callScore = 0;
+      let putScore = 0;
+      let notes = [];
+
+      if (trend === 'up') { callScore += 2; notes.push('Tendencia alcista favorece compras.'); }
+      if (trend === 'down') { putScore += 2; notes.push('Tendencia bajista favorece ventas.'); }
+      if (trend === 'flat') { notes.push('Mercado lateral: cuidado con rupturas falsas.'); }
+
+      if (rsi === 'oversold') { callScore += 1.5; notes.push('RSI en zona baja/rebote.'); }
+      if (rsi === 'overbought') { putScore += 1.5; notes.push('RSI en zona alta/rechazo.'); }
+
+      if (candle === 'bull_rej') { callScore += 1.5; notes.push('Presión alcista en la vela.'); }
+      if (candle === 'bear_rej') { putScore += 1.5; notes.push('Presión bajista en la vela.'); }
+      if (candle === 'doji') { notes.push('Vela de indecisión reduce certeza.'); }
+
+      if (level === 'support') { callScore += 1; notes.push('Precio cerca de soporte.'); }
+      if (level === 'resistance') { putScore += 1; notes.push('Precio cerca de resistencia.'); }
+      if (level === 'none') { notes.push('Sin nivel claro: mayor probabilidad de ruido.'); }
+
+      if (tf === 'otc' || tf === '1m') {
+        notes.push(`Temporalidad ${tf.toUpperCase()}: reduce el tamaño y evita sobreoperar.`);
+      }
+
+      const diff = Math.abs(callScore - putScore);
+      const box = document.getElementById('result');
+
+      let signalText = 'ESPERAR / NO OPERAR';
+      let signalClass = 'wait';
+      let summary = `Confluencia débil o mixta (CALL ${callScore} vs PUT ${putScore}). Mejor esperar setup limpio.`;
+
+      if (callScore >= 3.5 && diff >= 2) {
+        signalText = 'SUBE (CALL / COMPRA)';
+        signalClass = 'call';
+        summary = `Confluencia alcista (${callScore} pts). Riesgo sugerido máx: ${Math.min(risk, 2)}%.`;
+      } else if (putScore >= 3.5 && diff >= 2) {
+        signalText = 'BAJA (PUT / VENTA)';
+        signalClass = 'put';
+        summary = `Confluencia bajista (${putScore} pts). Riesgo sugerido máx: ${Math.min(risk, 2)}%.`;
+      }
+
+      box.innerHTML = `
+        <div style="color: var(--muted); font-size: 0.85rem;">VEREDICTO TÉCNICO</div>
+        <div class="signal ${signalClass}">${signalText}</div>
+        <div style="font-size: 0.9rem;">${summary}</div>
+        <ul class="reasons">${notes.map(n => `<li>${n}</li>`).join('')}</ul>
+      `;
+    }
+  </script>
+</body>
+</html>
